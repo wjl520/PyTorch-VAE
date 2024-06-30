@@ -9,19 +9,37 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 from torchvision.datasets import CelebA
 import zipfile
-
+from PIL import Image
 
 # Add your custom dataset class here
 class MyDataset(Dataset):
-    def __init__(self):
-        pass
-    
+    def __init__(self, root_data_path, split, transform, ratio=0.8):
+        
+        image_list = sorted(os.listdir(root_data_path))
+        data_length = int(len(image_list) * ratio)
+        
+        if split == "train":
+            image_list = image_list[:data_length]       
+        else: # valid or test stage.
+            image_list = image_list[data_length:]
+
+        self.data_list = []
+        for path in image_list:
+            self.data_list.append(os.path.join(root_data_path, path))
+
+        print(f"dataset: {split}, length:{len(self.data_list)}, total:{len(image_list)}")
+
+        self.transform = transform
     
     def __len__(self):
-        pass
+        return len(self.data_list)
     
     def __getitem__(self, idx):
-        pass
+        img_path = self.data_list[idx]
+        img = Image.open(img_path).convert("RGB")
+        img_tensor = self.transform(img)
+
+        return img_tensor
 
 
 class MyCelebA(CelebA):
@@ -98,34 +116,11 @@ class VAEDataset(LightningDataModule):
         self.pin_memory = pin_memory
 
     def setup(self, stage: Optional[str] = None) -> None:
-#       =========================  OxfordPets Dataset  =========================
-            
-#         train_transforms = transforms.Compose([transforms.RandomHorizontalFlip(),
-#                                               transforms.CenterCrop(self.patch_size),
-# #                                               transforms.Resize(self.patch_size),
-#                                               transforms.ToTensor(),
-#                                                 transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))])
-        
-#         val_transforms = transforms.Compose([transforms.RandomHorizontalFlip(),
-#                                             transforms.CenterCrop(self.patch_size),
-# #                                             transforms.Resize(self.patch_size),
-#                                             transforms.ToTensor(),
-#                                               transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))])
-
-#         self.train_dataset = OxfordPets(
-#             self.data_dir,
-#             split='train',
-#             transform=train_transforms,
-#         )
-        
-#         self.val_dataset = OxfordPets(
-#             self.data_dir,
-#             split='val',
-#             transform=val_transforms,
-#         )
-        
-#       =========================  CelebA Dataset  =========================
-    
+        '''
+           =========================  CelebA Dataset  =========================
+   
+        '''
+ 
         train_transforms = transforms.Compose([transforms.RandomHorizontalFlip(),
                                               transforms.CenterCrop(148),
                                               transforms.Resize(self.patch_size),
@@ -136,7 +131,7 @@ class VAEDataset(LightningDataModule):
                                             transforms.Resize(self.patch_size),
                                             transforms.ToTensor(),])
         
-        self.train_dataset = MyCelebA(
+        self.train_dataset = MyDataset(
             self.data_dir,
             split='train',
             transform=train_transforms,
@@ -144,7 +139,7 @@ class VAEDataset(LightningDataModule):
         )
         
         # Replace CelebA with your dataset
-        self.val_dataset = MyCelebA(
+        self.val_dataset = MyDataset(
             self.data_dir,
             split='test',
             transform=val_transforms,
@@ -178,4 +173,5 @@ class VAEDataset(LightningDataModule):
             shuffle=True,
             pin_memory=self.pin_memory,
         )
-     
+
+
