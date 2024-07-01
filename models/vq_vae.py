@@ -89,7 +89,7 @@ class VQVAE(BaseVAE):
 
         modules = []
         if hidden_dims is None:
-            hidden_dims = [128, 256]
+            hidden_dims = [128, 256, 256]
 
         # Build Encoder
         for h_dim in hidden_dims:
@@ -100,13 +100,6 @@ class VQVAE(BaseVAE):
                     nn.LeakyReLU())
             )
             in_channels = h_dim
-
-        modules.append(
-            nn.Sequential(
-                nn.Conv2d(in_channels, in_channels,
-                          kernel_size=3, stride=1, padding=1),
-                nn.LeakyReLU())
-        )
 
         for _ in range(6):
             modules.append(ResidualLayer(in_channels, in_channels))
@@ -154,7 +147,7 @@ class VQVAE(BaseVAE):
                                        padding=1),
                     nn.LeakyReLU())
             )
-
+    
         modules.append(
             nn.Sequential(
                 nn.ConvTranspose2d(hidden_dims[-1],
@@ -188,7 +181,9 @@ class VQVAE(BaseVAE):
 
     def forward(self, input: Tensor, **kwargs) -> List[Tensor]:
         encoding = self.encode(input)[0]
+        #print(f"latent_size: {encoding.shape}")
         quantized_inputs, vq_loss = self.vq_layer(encoding)
+        #print(f"quantized_inputs: {quantized_inputs.shape}")
         return [self.decode(quantized_inputs), input, vq_loss]
 
     def loss_function(self,

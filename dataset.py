@@ -13,8 +13,8 @@ from PIL import Image
 
 # Add your custom dataset class here
 class MyDataset(Dataset):
-    def __init__(self, root_data_path, split, transform, ratio=0.8):
-        
+    def __init__(self, root_data_path, split, transform, download=False, ratio=0.8):
+
         image_list = sorted(os.listdir(root_data_path))
         data_length = int(len(image_list) * ratio)
         
